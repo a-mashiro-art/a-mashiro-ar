@@ -168,6 +168,30 @@
     return 'https://raw.githubusercontent.com/' + cfg.owner + '/' + cfg.repo + '/' + cfg.branch + '/' + path + '?t=' + Date.now();
   }
 
+  // Right after a save, raw.githubusercontent.com's CDN can briefly lag
+  // behind the actual repo content. Retry a few times before giving up.
+  function attachImageRetry(img, item) {
+    var attempts = 0;
+    var maxAttempts = 5;
+    img.addEventListener('error', function onError() {
+      attempts++;
+      if (attempts >= maxAttempts || item.previewUrl.indexOf('raw.githubusercontent.com') === -1) {
+        img.removeEventListener('error', onError);
+        img.classList.add('img-broken');
+        img.alt = '画像を読み込めませんでした（反映待ちの可能性があります）';
+        var placeholder = document.createElement('div');
+        placeholder.className = 'img-placeholder';
+        placeholder.textContent = '反映を待っています…';
+        img.parentNode.insertBefore(placeholder, img);
+        return;
+      }
+      setTimeout(function () {
+        var base = item.previewUrl.split('?')[0];
+        img.src = base + '?t=' + Date.now();
+      }, 1000 * attempts);
+    });
+  }
+
   function fetchJson(path) {
     return fetch(apiBase() + path + '?ref=' + encodeURIComponent(cfg.branch), { headers: authHeaders() })
       .then(function (res) {
@@ -228,6 +252,7 @@
 
       var img = document.createElement('img');
       img.src = item.previewUrl;
+      attachImageRetry(img, item);
       card.appendChild(img);
 
       if (item.isNew) {
