@@ -113,6 +113,7 @@ body.home main {
   display: flex;
   flex-direction: column;
   min-height: 0;
+  width: 100%;
 }
 
 .hero-slider {
@@ -127,6 +128,7 @@ body.home .hero-slider {
   flex: 1;
   height: auto;
   min-height: 0;
+  width: 100%;
 }
 
 .hero-slide {
