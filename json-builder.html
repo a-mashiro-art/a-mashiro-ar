@@ -54,9 +54,7 @@
     border: 1px solid #eee;
     border-radius: 8px;
     overflow: hidden;
-    cursor: grab;
   }
-  .card.dragging { opacity: 0.4; }
   .card img { width: 100%; height: 130px; object-fit: cover; display: block; background: #f2f2f2; }
   .card .body { padding: 8px 10px; }
   .card .fname { font-size: 11px; color: #999; word-break: break-all; margin-bottom: 4px; }
@@ -65,7 +63,34 @@
     font-size: 13px;
     padding: 5px 7px;
   }
-  .card .order { font-size: 11px; color: #b34d3c; font-weight: 500; margin-bottom: 2px; }
+  .order-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 6px;
+  }
+  .move-btn {
+    font-family: inherit;
+    font-size: 11px;
+    width: 26px;
+    height: 26px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    background: #fff;
+    color: #555;
+    cursor: pointer;
+    padding: 0;
+    flex-shrink: 0;
+  }
+  .move-btn:hover:not(:disabled) { background: #f0f0f0; }
+  .move-btn:disabled { opacity: 0.3; cursor: default; }
+  .pos-input {
+    width: 48px !important;
+    text-align: center;
+    font-weight: 500;
+    color: #b34d3c;
+    padding: 5px 4px !important;
+  }
 
   textarea {
     width: 100%;
@@ -86,6 +111,7 @@
 <p class="hint">
   GitHubの画像フォルダに直接アップロードした後、このページで読み込むと、並び替え・タイトル入力ができ、
   貼り付け用のJSONを自動生成します。<strong>このツールはGitHubに書き込みを一切行いません</strong>（読み取り専用・トークン不要）。
+  並び替えは、各カードの番号を直接入力するか、▲▼ボタンで一つずつ動かしてください。
   入力したタイトルと並び順は、このブラウザに自動で記録され、同じフォルダを次回開いた時に復元されます。
   生成されたJSONは、ご自身で <code>data/○○.json</code> にコピー&貼り付けしてください。
 </p>
@@ -235,13 +261,21 @@
       });
   });
 
+  function moveItem(fromIdx, toIdx) {
+    toIdx = Math.max(0, Math.min(items.length - 1, toIdx));
+    if (fromIdx === toIdx) return;
+    var moved = items.splice(fromIdx, 1)[0];
+    items.splice(toIdx, 0, moved);
+    renderCards();
+    updateOutput();
+    saveLocalState();
+  }
+
   function renderCards() {
     cardListEl.innerHTML = '';
     items.forEach(function (item, idx) {
       var card = document.createElement('div');
       card.className = 'card';
-      card.draggable = true;
-      card.dataset.index = idx;
 
       var img = document.createElement('img');
       img.src = item.previewUrl;
@@ -251,10 +285,41 @@
       var body = document.createElement('div');
       body.className = 'body';
 
-      var order = document.createElement('div');
-      order.className = 'order';
-      order.textContent = '#' + (idx + 1);
-      body.appendChild(order);
+      var orderRow = document.createElement('div');
+      orderRow.className = 'order-row';
+
+      var btnUp = document.createElement('button');
+      btnUp.type = 'button';
+      btnUp.className = 'move-btn';
+      btnUp.textContent = '▲';
+      btnUp.title = '一つ前へ';
+      btnUp.disabled = idx === 0;
+      btnUp.addEventListener('click', function () { moveItem(idx, idx - 1); });
+
+      var posInput = document.createElement('input');
+      posInput.type = 'number';
+      posInput.className = 'pos-input';
+      posInput.min = '1';
+      posInput.max = String(items.length);
+      posInput.value = idx + 1;
+      posInput.addEventListener('change', function () {
+        var target = parseInt(posInput.value, 10) - 1;
+        if (isNaN(target)) { posInput.value = idx + 1; return; }
+        moveItem(idx, target);
+      });
+
+      var btnDown = document.createElement('button');
+      btnDown.type = 'button';
+      btnDown.className = 'move-btn';
+      btnDown.textContent = '▼';
+      btnDown.title = '一つ後ろへ';
+      btnDown.disabled = idx === items.length - 1;
+      btnDown.addEventListener('click', function () { moveItem(idx, idx + 1); });
+
+      orderRow.appendChild(btnUp);
+      orderRow.appendChild(posInput);
+      orderRow.appendChild(btnDown);
+      body.appendChild(orderRow);
 
       var fname = document.createElement('div');
       fname.className = 'fname';
@@ -274,45 +339,7 @@
 
       card.appendChild(body);
       cardListEl.appendChild(card);
-
-      card.addEventListener('dragstart', function () { card.classList.add('dragging'); });
-      card.addEventListener('dragend', function () { card.classList.remove('dragging'); });
     });
-  }
-
-  cardListEl.addEventListener('dragover', function (e) {
-    e.preventDefault();
-    var dragging = cardListEl.querySelector('.dragging');
-    if (!dragging) return;
-    var after = getDragAfterElement(cardListEl, e.clientX);
-    if (after == null) {
-      cardListEl.appendChild(dragging);
-    } else {
-      cardListEl.insertBefore(dragging, after);
-    }
-  });
-  cardListEl.addEventListener('drop', function () {
-    var newOrder = [];
-    cardListEl.querySelectorAll('.card').forEach(function (c) {
-      newOrder.push(items[parseInt(c.dataset.index, 10)]);
-    });
-    items = newOrder;
-    renderCards();
-    updateOutput();
-    saveLocalState();
-  });
-
-  function getDragAfterElement(container, x) {
-    var cards = Array.prototype.slice.call(container.querySelectorAll('.card:not(.dragging)'));
-    var closest = { offset: -Infinity, element: null };
-    cards.forEach(function (card) {
-      var box = card.getBoundingClientRect();
-      var offset = x - box.left - box.width / 2;
-      if (offset < 0 && offset > closest.offset) {
-        closest = { offset: offset, element: card };
-      }
-    });
-    return closest.element;
   }
 
   function updateOutput() {
