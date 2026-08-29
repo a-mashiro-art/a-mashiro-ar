@@ -292,7 +292,14 @@ footer {
   .about-photo { width: 60%; margin: 0 auto; }
 
   body.home { display: block; min-height: auto; }
-  body.home .hero-slider { flex: none; height: auto; aspect-ratio: 4 / 5; margin: 10px 0; }
+  body.home .hero-slider {
+    flex: none;
+    height: 0;
+    padding-top: 125%;
+    margin: 10px 0;
+    position: relative;
+    overflow: hidden;
+  }
 }
 
 /* Gallery lightbox */
