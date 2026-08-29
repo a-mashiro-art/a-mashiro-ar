@@ -2,18 +2,18 @@
   'use strict';
 
   var SECTIONS = {
-    home: { label: 'الرئيسية (سلايدر)', note: 'ترتيب الصور هنا هو ترتيب عرضها في السلايدر بالصفحة الرئيسية.' },
-    about: { label: 'عن الفنان (صورة)', note: 'يُستخدم أول عنصر في القائمة فقط كصورة الفنان في صفحة "عن الفنان".' },
-    works: { label: 'مختارات', note: '' },
+    home: { label: 'ホーム（スライドショー）', note: 'ここでの並び順がそのままスライドショーの表示順になります。' },
+    about: { label: 'ABOUT（写真）', note: 'リストの一番上の画像だけがABOUTページの写真として使われます。' },
+    works: { label: 'Selected Works', note: '' },
     s1121: { label: '11-21', note: '' },
-    memories: { label: 'ذكريات في أعماق القلب', note: '' },
-    primitives: { label: 'بدائيات', note: '' },
-    misalignment: { label: 'عدم الاصطفاف', note: '' },
-    window: { label: 'نافذة التنوير', note: '' },
-    dots2: { label: 'نقطتان', note: '' },
-    paintingover: { label: 'إعادة الطلاء', note: '' },
-    ginga: { label: 'جينغا', note: '' },
-    collaboration: { label: 'أعمال تعاونية', note: '' }
+    memories: { label: 'Memories Deep in The Heart', note: '' },
+    primitives: { label: 'Primitives', note: '' },
+    misalignment: { label: 'Misalignment', note: '' },
+    window: { label: 'Window of Enlightenment', note: '' },
+    dots2: { label: '2dots', note: '' },
+    paintingover: { label: 'Painting Over', note: '' },
+    ginga: { label: 'Ginga', note: '' },
+    collaboration: { label: 'Collaboration', note: '' }
   };
 
   var cfg = loadConfig();
@@ -100,7 +100,7 @@
     localStorage.removeItem('amashiro_admin_cfg');
     cfg = {};
     document.getElementById('cfg-token').value = '';
-    setStatus('تم مسح التوكن من هذا المتصفح.', 'ok');
+    setStatus('このブラウザからトークンを削除しました。', 'ok');
   });
 
   // ---------- section nav ----------
@@ -109,7 +109,7 @@
     btn.addEventListener('click', function () {
       if (!configReady()) {
         settingsPanel.classList.remove('hidden');
-        setStatus('يرجى إدخال بيانات الاتصال بالمستودع أولًا.', 'err');
+        setStatus('先にリポジトリの接続情報を入力してください。', 'err');
         return;
       }
       document.querySelectorAll('.sec-btn').forEach(function (b) { b.classList.remove('active'); });
@@ -134,7 +134,7 @@
     noSectionEl.classList.add('hidden');
     editorEl.classList.remove('hidden');
     sectionTitleEl.textContent = SECTIONS[key].label;
-    cardListEl.innerHTML = '<div class="hint">جارٍ التحميل…</div>';
+    cardListEl.innerHTML = '<div class="hint">読み込み中…</div>';
 
     var manifestPath = 'data/' + key + '.json';
     var folderPath = 'images/' + key;
@@ -206,14 +206,14 @@
       if (item.isNew) {
         var badge = document.createElement('span');
         badge.className = 'badge-new';
-        badge.textContent = 'جديد';
+        badge.textContent = '新規';
         card.appendChild(badge);
       }
 
       var delBtn = document.createElement('button');
       delBtn.className = 'btn-del';
       delBtn.innerHTML = '&times;';
-      delBtn.title = 'حذف';
+      delBtn.title = '削除';
       delBtn.addEventListener('click', function () {
         items.splice(idx, 1);
         renderCards();
@@ -230,7 +230,7 @@
 
       var titleInput = document.createElement('input');
       titleInput.type = 'text';
-      titleInput.placeholder = 'عنوان (اختياري)';
+      titleInput.placeholder = 'タイトル（任意）';
       titleInput.value = item.title || '';
       titleInput.addEventListener('input', function () {
         item.title = titleInput.value;
@@ -329,7 +329,7 @@
   btnSave.addEventListener('click', function () {
     if (!currentKey) return;
     btnSave.disabled = true;
-    setStatus('جارٍ الحفظ…');
+    setStatus('保存中…');
 
     var folderPath = 'images/' + currentKey;
     var manifestPath = 'data/' + currentKey + '.json';
@@ -382,12 +382,12 @@
         }).then(checkOk);
       })
       .then(function () {
-        setStatus('تم الحفظ والنشر بنجاح. قد يستغرق ظهور التغييرات على الموقع دقيقة أو دقيقتين.', 'ok');
+        setStatus('保存・公開が完了しました。サイトへの反映には1〜2分ほどかかることがあります。', 'ok');
         openSection(currentKey); // reload fresh state (new shas, cleared isNew flags)
       })
       .catch(function (err) {
         console.error(err);
-        setStatus('حدث خطأ أثناء الحفظ: ' + err.message, 'err');
+        setStatus('保存中にエラーが発生しました: ' + err.message, 'err');
       })
       .finally(function () {
         btnSave.disabled = false;
