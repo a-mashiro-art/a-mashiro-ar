@@ -370,7 +370,7 @@
         return fetchJson(manifestPath).catch(function () { return null; });
       })
       .then(function (fresh) {
-        var freshSha = fresh ? fresh.sha : null;
+        var freshSha = fresh ? fresh.sha : manifestSha;
         var manifestItems = items.map(function (it) {
           return { file: it.file, title: it.title || '' };
         });
