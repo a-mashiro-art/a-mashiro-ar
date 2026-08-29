@@ -148,12 +148,12 @@ body.home .hero-slider {
 .hero-nav::before {
   content: "";
   display: block;
-  width: 14px;
-  height: 14px;
-  border-top: 3px solid #fff;
-  border-right: 3px solid #fff;
-  margin: 17px;
-  filter: drop-shadow(0 1px 3px rgba(0,0,0,0.5));
+  width: 12px;
+  height: 12px;
+  border-top: 1.5px solid rgba(255,255,255,0.75);
+  border-right: 1.5px solid rgba(255,255,255,0.75);
+  margin: 18px;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.4));
 }
 
 .hero-prev { left: 12px; }
