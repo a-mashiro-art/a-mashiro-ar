@@ -86,6 +86,7 @@
 <p class="hint">
   GitHubの画像フォルダに直接アップロードした後、このページで読み込むと、並び替え・タイトル入力ができ、
   貼り付け用のJSONを自動生成します。<strong>このツールはGitHubに書き込みを一切行いません</strong>（読み取り専用・トークン不要）。
+  入力したタイトルと並び順は、このブラウザに自動で記録され、同じフォルダを次回開いた時に復元されます。
   生成されたJSONは、ご自身で <code>data/○○.json</code> にコピー&貼り付けしてください。
 </p>
 
@@ -140,6 +141,25 @@
     statusEl.className = 'status' + (kind ? ' ' + kind : '');
   }
 
+  function storageKey(section) {
+    return 'amashiro_jsonbuilder_' + section;
+  }
+
+  function saveLocalState() {
+    if (!sectionKey) return;
+    var data = items.map(function (it) { return { file: it.file, title: it.title || '' }; });
+    try {
+      localStorage.setItem(storageKey(sectionKey), JSON.stringify(data));
+    } catch (e) { /* storage full or unavailable — not critical */ }
+  }
+
+  function loadLocalState(section) {
+    try {
+      var raw = localStorage.getItem(storageKey(section));
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) { return null; }
+  }
+
   function cfg() {
     return {
       owner: document.getElementById('cfg-owner').value.trim(),
@@ -183,9 +203,31 @@
           setStatus('このフォルダに画像が見つかりませんでした。', 'err');
           return;
         }
-        setStatus(items.length + '件の画像を読み込みました。カードをドラッグして並び替え、必要ならタイトルを入力してください。', 'ok');
+
+        // restore previously saved titles + order for this section, if any
+        var saved = loadLocalState(c.section);
+        var restoredNote = '';
+        if (saved && saved.length) {
+          var titleByFile = {};
+          saved.forEach(function (s) { titleByFile[s.file] = s.title; });
+          items.forEach(function (it) {
+            if (titleByFile.hasOwnProperty(it.file)) it.title = titleByFile[it.file];
+          });
+          var savedOrder = saved.map(function (s) { return s.file; });
+          items.sort(function (a, b) {
+            var ia = savedOrder.indexOf(a.file);
+            var ib = savedOrder.indexOf(b.file);
+            if (ia === -1) ia = savedOrder.length + items.indexOf(a);
+            if (ib === -1) ib = savedOrder.length + items.indexOf(b);
+            return ia - ib;
+          });
+          restoredNote = '（前回の並び順・タイトルを復元しました）';
+        }
+
+        setStatus(items.length + '件の画像を読み込みました。' + restoredNote + ' カードをドラッグして並び替え、必要ならタイトルを入力してください。', 'ok');
         renderCards();
         updateOutput();
+        saveLocalState();
       })
       .catch(function (err) {
         console.error(err);
@@ -226,6 +268,7 @@
       titleInput.addEventListener('input', function () {
         item.title = titleInput.value;
         updateOutput();
+        saveLocalState();
       });
       body.appendChild(titleInput);
 
@@ -256,6 +299,7 @@
     items = newOrder;
     renderCards();
     updateOutput();
+    saveLocalState();
   });
 
   function getDragAfterElement(container, x) {
