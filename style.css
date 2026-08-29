@@ -89,18 +89,19 @@ main { max-width: 1400px; margin: 0 auto; padding: 0 48px 100px; }
 }
 
 .gallery {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 6px;
+  column-count: 2;
+  column-gap: 6px;
 }
 
 .gallery img { width: 100%; height: auto; max-width: none; display: block; }
 
 .gallery .gallery-item {
   height: auto;
+  break-inside: avoid;
+  margin-bottom: 6px;
 }
 
-.gallery.three { grid-template-columns: 1fr 1fr 1fr; }
+.gallery.three { column-count: 3; }
 
 .hero-img { width: 100%; display: block; }
 
@@ -287,7 +288,7 @@ footer {
   header nav.mainnav { display: none; }
   .hamburger { display: flex; }
   main { padding: 0 20px 60px; }
-  .gallery, .gallery.three { grid-template-columns: 1fr; }
+  .gallery, .gallery.three { column-count: 1; }
   .about-wrap { flex-direction: column; }
   .about-photo { width: 60%; margin: 0 auto; }
 
