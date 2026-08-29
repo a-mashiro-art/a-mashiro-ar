@@ -365,6 +365,12 @@
 
     Promise.all(uploadPromises.concat(deletePromises))
       .then(function () {
+        // re-fetch the manifest's current sha right before writing,
+        // to avoid 409 conflicts if it changed since the section was opened
+        return fetchJson(manifestPath).catch(function () { return null; });
+      })
+      .then(function (fresh) {
+        var freshSha = fresh ? fresh.sha : null;
         var manifestItems = items.map(function (it) {
           return { file: it.file, title: it.title || '' };
         });
@@ -373,7 +379,7 @@
           content: utf8ToBase64(JSON.stringify(manifestItems, null, 2)),
           branch: cfg.branch
         };
-        if (manifestSha) body.sha = manifestSha;
+        if (freshSha) body.sha = freshSha;
 
         return fetch(apiBase() + manifestPath, {
           method: 'PUT',
