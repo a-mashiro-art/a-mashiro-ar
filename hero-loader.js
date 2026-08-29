@@ -17,20 +17,52 @@ document.addEventListener('DOMContentLoaded', function () {
         slide.appendChild(img);
         slider.appendChild(slide);
       });
-      startSlideshow();
+      setupControls();
     })
     .catch(function (err) {
       console.error('تعذّر تحميل صور الصفحة الرئيسية', err);
     });
 
-  function startSlideshow() {
+  function setupControls() {
     var slides = slider.querySelectorAll('.hero-slide');
-    if (slides.length < 2) return;
+    if (!slides.length) return;
+
     var i = 0;
-    setInterval(function () {
+    var timer = null;
+
+    function goTo(index) {
       slides[i].classList.remove('active');
-      i = (i + 1) % slides.length;
+      i = (index + slides.length) % slides.length;
       slides[i].classList.add('active');
-    }, 4500);
+    }
+
+    function restartTimer() {
+      if (timer) clearInterval(timer);
+      if (slides.length < 2) return;
+      timer = setInterval(function () { goTo(i + 1); }, 4500);
+    }
+
+    if (slides.length > 1) {
+      var prevBtn = document.createElement('button');
+      prevBtn.className = 'hero-nav hero-prev';
+      prevBtn.setAttribute('aria-label', 'prev');
+      var nextBtn = document.createElement('button');
+      nextBtn.className = 'hero-nav hero-next';
+      nextBtn.setAttribute('aria-label', 'next');
+
+      prevBtn.addEventListener('click', function () {
+        goTo(i - 1);
+        restartTimer();
+      });
+      nextBtn.addEventListener('click', function () {
+        goTo(i + 1);
+        restartTimer();
+      });
+
+      slider.appendChild(prevBtn);
+      slider.appendChild(nextBtn);
+    }
+
+    restartTimer();
   }
 });
