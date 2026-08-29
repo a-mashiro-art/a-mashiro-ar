@@ -189,6 +189,33 @@
       .then(function (data) { return Array.isArray(data) ? data : []; });
   }
 
+  function fetchSha(path) {
+    return fetch(apiBase() + path + '?ref=' + encodeURIComponent(cfg.branch), { headers: authHeaders() })
+      .then(function (res) {
+        if (!res.ok) return null;
+        return res.json();
+      })
+      .then(function (data) { return data ? data.sha : null; })
+      .catch(function () { return null; });
+  }
+
+  function delay(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+
+  // Retries a request that needs a fresh "sha" right before sending it,
+  // to work around GitHub's Contents API sometimes serving a stale sha.
+  function withFreshSha(path, buildRequest, attemptsLeft) {
+    return fetchSha(path).then(function (sha) {
+      return fetch.apply(null, buildRequest(sha)).then(function (res) {
+        if (res.status === 409 && attemptsLeft > 1) {
+          return delay(1200).then(function () {
+            return withFreshSha(path, buildRequest, attemptsLeft - 1);
+          });
+        }
+        return checkOk(res);
+      });
+    });
+  }
+
   // ---------- rendering ----------
 
   function renderCards() {
@@ -352,18 +379,19 @@
     });
 
     var deletePromises = deletions.map(function (name) {
-      return fetch(apiBase() + folderPath + '/' + name, {
-        method: 'DELETE',
-        headers: Object.assign({ 'Content-Type': 'application/json' }, authHeaders()),
-        body: JSON.stringify({
-          message: 'admin: remove image ' + name,
-          sha: shaMap[name],
-          branch: cfg.branch
-        })
-      }).then(checkOk);
+      var path = folderPath + '/' + name;
+      return withFreshSha(path, function (sha) {
+        return [apiBase() + path, {
+          method: 'DELETE',
+          headers: Object.assign({ 'Content-Type': 'application/json' }, authHeaders()),
+          body: JSON.stringify({
+            message: 'admin: remove image ' + name,
+            sha: sha || shaMap[name],
+            branch: cfg.branch
+          })
+        }];
+      }, 4);
     });
-
-    function delay(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
 
     function writeManifest(attemptsLeft) {
       return fetchJson(manifestPath).catch(function () { return null; })
@@ -393,12 +421,32 @@
         });
     }
 
+    function waitUntilVisible(path, expectedSha, attemptsLeft) {
+      return fetchSha(path).then(function (sha) {
+        if (sha === expectedSha) return true;
+        if (attemptsLeft <= 1) return false;
+        setStatus('反映を確認しています…');
+        return delay(1000).then(function () {
+          return waitUntilVisible(path, expectedSha, attemptsLeft - 1);
+        });
+      });
+    }
+
     Promise.all(uploadPromises.concat(deletePromises))
       .then(function () {
         return writeManifest(4);
       })
-      .then(function () {
-        setStatus('保存・公開が完了しました。サイトへの反映には1〜2分ほどかかることがあります。', 'ok');
+      .then(function (manifestResult) {
+        var newSha = manifestResult && manifestResult.content ? manifestResult.content.sha : null;
+        if (!newSha) return true;
+        return waitUntilVisible(manifestPath, newSha, 8);
+      })
+      .then(function (confirmed) {
+        if (confirmed) {
+          setStatus('保存・公開が完了し、反映も確認できました。', 'ok');
+        } else {
+          setStatus('保存はできましたが、反映の確認に時間がかかっています。少し待ってからページを再読み込みしてください。', 'ok');
+        }
         openSection(currentKey); // reload fresh state (new shas, cleared isNew flags)
       })
       .catch(function (err) {
