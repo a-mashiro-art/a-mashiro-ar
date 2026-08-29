@@ -145,6 +145,11 @@ body {
   font-size: 12px;
   background: #f2f2f2;
 }
+
+.card .img-placeholder.img-missing {
+  color: #b34d3c;
+  background: #fbf0ee;
+}
 .card .card-body { padding: 8px 10px; }
 .card input[type=text] {
   width: 100%;

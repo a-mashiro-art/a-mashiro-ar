@@ -155,6 +155,7 @@
         } catch (e) { items = []; }
         items.forEach(function (it) {
           it.previewUrl = rawUrl(folderPath + '/' + it.file);
+          it.missing = !shaMap[it.file];
         });
       } else {
         manifestSha = null;
@@ -252,7 +253,15 @@
 
       var img = document.createElement('img');
       img.src = item.previewUrl;
-      attachImageRetry(img, item);
+      if (item.missing) {
+        img.style.display = 'none';
+        var missingBox = document.createElement('div');
+        missingBox.className = 'img-placeholder img-missing';
+        missingBox.textContent = 'GitHub上に存在しません';
+        card.appendChild(missingBox);
+      } else {
+        attachImageRetry(img, item);
+      }
       card.appendChild(img);
 
       if (item.isNew) {
@@ -414,6 +423,13 @@
 
   btnSave.addEventListener('click', function () {
     if (!currentKey) return;
+
+    var realItemCount = items.filter(function (it) { return !it.missing; }).length;
+    if (realItemCount === 0 && Object.keys(shaMap).some(function (n) { return n !== '.gitkeep'; })) {
+      var ok = confirm('この操作で、このセクションの画像が全てGitHubから削除されます。本当によろしいですか？');
+      if (!ok) return;
+    }
+
     btnSave.disabled = true;
     setStatus('GitHub上の最新の状態を確認しています…');
 
