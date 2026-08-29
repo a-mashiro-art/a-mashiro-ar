@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>A-Mashiro — لوحة إدارة الصور</title>
+<link rel="stylesheet" href="admin.css">
+</head>
+<body>
+
+<header class="admin-header">
+  <div class="logo">A-Mashiro <span>لوحة الإدارة</span></div>
+  <button id="btn-settings" class="btn-ghost">إعدادات الاتصال</button>
+</header>
+
+<div id="settings-panel" class="panel hidden">
+  <h2>الاتصال بالمستودع (GitHub)</h2>
+  <p class="hint">
+    تُستخدم هذه البيانات لحفظ التغييرات مباشرة في مستودع GitHub الذي يستضيف الموقع.
+    التوكن يُحفظ في متصفحك فقط ولا يُرسل إلى أي جهة أخرى. لا تشارك هذا التوكن مع أحد.
+  </p>
+  <label>اسم المستخدم / المنظمة (owner)
+    <input id="cfg-owner" type="text" placeholder="مثال: a-mashiro">
+  </label>
+  <label>اسم المستودع (repository)
+    <input id="cfg-repo" type="text" placeholder="مثال: a-mashiro-ar">
+  </label>
+  <label>الفرع (branch)
+    <input id="cfg-branch" type="text" value="main">
+  </label>
+  <label>Personal Access Token
+    <input id="cfg-token" type="password" placeholder="ghp_xxxxxxxxxxxxxxxx">
+  </label>
+  <div class="row">
+    <button id="btn-save-settings" class="btn-primary">حفظ الإعدادات</button>
+    <button id="btn-forget-settings" class="btn-ghost">مسح التوكن من هذا المتصفح</button>
+  </div>
+</div>
+
+<div class="admin-body">
+  <nav class="section-nav">
+    <div class="section-nav-title">الأقسام</div>
+    <button class="sec-btn" data-key="home">الرئيسية (سلايدر)</button>
+    <button class="sec-btn" data-key="about">عن الفنان (صورة)</button>
+    <div class="section-nav-title">الأعمال</div>
+    <button class="sec-btn" data-key="works">مختارات</button>
+    <button class="sec-btn" data-key="s1121">11-21</button>
+    <button class="sec-btn" data-key="memories">ذكريات في أعماق القلب</button>
+    <button class="sec-btn" data-key="primitives">بدائيات</button>
+    <button class="sec-btn" data-key="misalignment">عدم الاصطفاف</button>
+    <button class="sec-btn" data-key="window">نافذة التنوير</button>
+    <button class="sec-btn" data-key="dots2">نقطتان</button>
+    <button class="sec-btn" data-key="paintingover">إعادة الطلاء</button>
+    <button class="sec-btn" data-key="ginga">جينغا</button>
+    <button class="sec-btn" data-key="collaboration">أعمال تعاونية</button>
+  </nav>
+
+  <main class="section-main">
+    <div id="no-section" class="empty-hint">اختر قسمًا من القائمة على اليمين للبدء.</div>
+
+    <div id="section-editor" class="hidden">
+      <h2 id="section-title"></h2>
+      <p class="hint">اسحب الصور وأفلتها هنا لإضافتها، أو اضغط للاختيار. اسحب البطاقات لإعادة الترتيب. التغييرات لا تُحفظ إلا بعد الضغط على "حفظ ونشر".</p>
+
+      <div id="dropzone" class="dropzone">
+        <span>أفلت الصور هنا، أو اضغط للاختيار</span>
+        <input id="file-input" type="file" accept="image/*" multiple hidden>
+      </div>
+
+      <div id="card-list" class="card-list"></div>
+
+      <div class="row save-row">
+        <button id="btn-save" class="btn-primary">حفظ ونشر</button>
+        <span id="status-msg" class="status-msg"></span>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="admin.js"></script>
+</body>
+</html>
