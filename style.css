@@ -383,11 +383,11 @@ footer {
 .lb-nav::before {
   content: "";
   display: block;
-  width: 14px;
-  height: 14px;
-  border-top: 3px solid #333;
-  border-right: 3px solid #333;
-  margin: 17px;
+  width: 12px;
+  height: 12px;
+  border-top: 1.5px solid rgba(51,51,51,0.75);
+  border-right: 1.5px solid rgba(51,51,51,0.75);
+  margin: 18px;
 }
 
 .lb-prev { left: 20px; }
