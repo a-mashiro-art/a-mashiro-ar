@@ -375,7 +375,13 @@
           content: it.base64,
           branch: cfg.branch
         })
-      }).then(checkOk);
+      }).then(checkOk).then(function (res) {
+        // lock this image in as "already uploaded" right away, so a later
+        // failure/retry of the manifest step never re-uploads it
+        it.isNew = false;
+        it.base64 = null;
+        return res;
+      });
     });
 
     var deletePromises = deletions.map(function (name) {
@@ -390,7 +396,10 @@
             branch: cfg.branch
           })
         }];
-      }, 4);
+      }, 4).then(function (res) {
+        delete shaMap[name];
+        return res;
+      });
     });
 
     function writeManifest(attemptsLeft) {
