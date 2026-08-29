@@ -73,11 +73,11 @@ function initLightbox() {
     if (e.target === overlay) close();
   });
   btnPrev.addEventListener('click', function () {
-    current = (current - 1 + items.length) % items.length;
+    current = (current + 1) % items.length;
     show();
   });
   btnNext.addEventListener('click', function () {
-    current = (current + 1) % items.length;
+    current = (current - 1 + items.length) % items.length;
     show();
   });
   document.addEventListener('keydown', function (e) {
