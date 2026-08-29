@@ -364,7 +364,38 @@
     var keptFiles = {};
     items.forEach(function (it) { if (!it.isNew) keptFiles[it.file] = true; });
 
-    var deletions = Object.keys(shaMap).filter(function (name) { return !keptFiles[name]; });
+    var deletions = Object.keys(shaMap).filter(function (name) {
+      return name !== '.gitkeep' && !keptFiles[name];
+    });
+
+    var keepPromise = Promise.resolve();
+    if (items.length === 0 && !shaMap['.gitkeep']) {
+      // folder is about to become empty — Git has no concept of empty
+      // folders, so drop a placeholder file to keep it from disappearing
+      keepPromise = fetch(apiBase() + folderPath + '/.gitkeep', {
+        method: 'PUT',
+        headers: Object.assign({ 'Content-Type': 'application/json' }, authHeaders()),
+        body: JSON.stringify({
+          message: 'admin: keep empty folder',
+          content: '',
+          branch: cfg.branch
+        })
+      }).then(checkOk);
+    } else if (items.length > 0 && shaMap['.gitkeep']) {
+      // folder has real content again — the placeholder is no longer needed
+      var keepPath = folderPath + '/.gitkeep';
+      keepPromise = withFreshSha(keepPath, function (sha) {
+        return [apiBase() + keepPath, {
+          method: 'DELETE',
+          headers: Object.assign({ 'Content-Type': 'application/json' }, authHeaders()),
+          body: JSON.stringify({
+            message: 'admin: remove placeholder',
+            sha: sha || shaMap['.gitkeep'],
+            branch: cfg.branch
+          })
+        }];
+      }, 2).catch(function () { /* not critical if this fails */ });
+    }
 
     var uploadPromises = items.filter(function (it) { return it.isNew; }).map(function (it) {
       return fetch(apiBase() + folderPath + '/' + it.file, {
@@ -375,9 +406,13 @@
           content: it.base64,
           branch: cfg.branch
         })
-      }).then(checkOk).then(function (res) {
-        // lock this image in as "already uploaded" right away, so a later
-        // failure/retry of the manifest step never re-uploads it
+      }).then(function (res) {
+        // 409 here means a file with this exact (unique, timestamped) name
+        // already exists — almost certainly from an earlier attempt of this
+        // very upload. Treat it as already-done rather than a fatal error.
+        if (res.status === 409) return null;
+        return checkOk(res);
+      }).then(function (res) {
         it.isNew = false;
         it.base64 = null;
         return res;
@@ -441,7 +476,7 @@
       });
     }
 
-    Promise.all(uploadPromises.concat(deletePromises))
+    Promise.all(uploadPromises.concat(deletePromises).concat([keepPromise]))
       .then(function () {
         return writeManifest(4);
       })
