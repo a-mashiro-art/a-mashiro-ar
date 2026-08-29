@@ -363,29 +363,39 @@
       }).then(checkOk);
     });
 
+    function delay(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+
+    function writeManifest(attemptsLeft) {
+      return fetchJson(manifestPath).catch(function () { return null; })
+        .then(function (fresh) {
+          var freshSha = fresh ? fresh.sha : manifestSha;
+          var manifestItems = items.map(function (it) {
+            return { file: it.file, title: it.title || '' };
+          });
+          var body = {
+            message: 'admin: update ' + currentKey + '.json',
+            content: utf8ToBase64(JSON.stringify(manifestItems, null, 2)),
+            branch: cfg.branch
+          };
+          if (freshSha) body.sha = freshSha;
+
+          return fetch(apiBase() + manifestPath, {
+            method: 'PUT',
+            headers: Object.assign({ 'Content-Type': 'application/json' }, authHeaders()),
+            body: JSON.stringify(body)
+          }).then(function (res) {
+            if (res.status === 409 && attemptsLeft > 1) {
+              setStatus('反映待ちのため再試行しています…');
+              return delay(1200).then(function () { return writeManifest(attemptsLeft - 1); });
+            }
+            return checkOk(res);
+          });
+        });
+    }
+
     Promise.all(uploadPromises.concat(deletePromises))
       .then(function () {
-        // re-fetch the manifest's current sha right before writing,
-        // to avoid 409 conflicts if it changed since the section was opened
-        return fetchJson(manifestPath).catch(function () { return null; });
-      })
-      .then(function (fresh) {
-        var freshSha = fresh ? fresh.sha : manifestSha;
-        var manifestItems = items.map(function (it) {
-          return { file: it.file, title: it.title || '' };
-        });
-        var body = {
-          message: 'admin: update ' + currentKey + '.json',
-          content: utf8ToBase64(JSON.stringify(manifestItems, null, 2)),
-          branch: cfg.branch
-        };
-        if (freshSha) body.sha = freshSha;
-
-        return fetch(apiBase() + manifestPath, {
-          method: 'PUT',
-          headers: Object.assign({ 'Content-Type': 'application/json' }, authHeaders()),
-          body: JSON.stringify(body)
-        }).then(checkOk);
+        return writeManifest(4);
       })
       .then(function () {
         setStatus('保存・公開が完了しました。サイトへの反映には1〜2分ほどかかることがあります。', 'ok');
