@@ -294,11 +294,15 @@ footer {
   body.home { display: block; min-height: auto; }
   body.home .hero-slider {
     flex: none;
-    height: 0;
-    padding-top: 125%;
+    height: 45vh;
+    padding-top: 0;
     margin: 10px 0;
     position: relative;
     overflow: hidden;
+  }
+
+  body.home .hero-slide img {
+    object-fit: cover;
   }
 }
 
