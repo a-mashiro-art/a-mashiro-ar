@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', function () {
     .then(function (items) {
       if (!items.length) return;
       var img = document.createElement('img');
-      img.src = folder + items[0].file;
+      img.src = folder + encodeURIComponent(items[0].file);
       img.alt = items[0].title || 'A-Mashiro';
       box.appendChild(img);
     })

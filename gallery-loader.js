@@ -13,7 +13,7 @@ document.addEventListener('DOMContentLoaded', function () {
       .then(function (items) {
         items.forEach(function (item) {
           var img = document.createElement('img');
-          img.src = folder + item.file;
+          img.src = folder + encodeURIComponent(item.file);
           img.alt = item.title || '';
           if (item.title) img.setAttribute('data-title', item.title);
           if (item.year) img.setAttribute('data-year', item.year);

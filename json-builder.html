@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>A-Mashiro — JSON作成ツール</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500&display=swap');
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: 'Tajawal', sans-serif;
+    font-weight: 300;
+    background: #f7f6f4;
+    color: #1a1a1a;
+    padding: 30px;
+  }
+  h1 { font-size: 20px; font-weight: 500; margin-bottom: 6px; }
+  .hint { font-size: 13px; color: #777; margin-bottom: 24px; line-height: 1.8; }
+  .row { display: flex; gap: 10px; align-items: end; flex-wrap: wrap; margin-bottom: 20px; }
+  label { display: block; font-size: 13px; color: #444; margin-bottom: 4px; }
+  input, select {
+    font-family: inherit;
+    font-size: 14px;
+    padding: 9px 10px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+  }
+  button {
+    font-family: inherit;
+    font-size: 14px;
+    padding: 10px 20px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    background: #b34d3c;
+    color: #fff;
+  }
+  button:hover { background: #9c3f30; }
+  button.ghost { background: #fff; border: 1px solid #ddd; color: #333; }
+  button.ghost:hover { background: #f0f0f0; }
+  .status { font-size: 13px; color: #666; margin-bottom: 16px; }
+  .status.err { color: #b34d3c; }
+  .status.ok { color: #2f7d3c; }
+
+  .card-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 14px;
+    margin-bottom: 24px;
+  }
+  .card {
+    background: #fff;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    overflow: hidden;
+    cursor: grab;
+  }
+  .card.dragging { opacity: 0.4; }
+  .card img { width: 100%; height: 130px; object-fit: cover; display: block; background: #f2f2f2; }
+  .card .body { padding: 8px 10px; }
+  .card .fname { font-size: 11px; color: #999; word-break: break-all; margin-bottom: 4px; }
+  .card input {
+    width: 100%;
+    font-size: 13px;
+    padding: 5px 7px;
+  }
+  .card .order { font-size: 11px; color: #b34d3c; font-weight: 500; margin-bottom: 2px; }
+
+  textarea {
+    width: 100%;
+    height: 260px;
+    font-family: 'SF Mono', Menlo, monospace;
+    font-size: 13px;
+    padding: 14px;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+    background: #fff;
+  }
+  .out-row { display: flex; gap: 10px; margin-top: 10px; }
+</style>
+</head>
+<body>
+
+<h1>作品一覧 JSON作成ツール</h1>
+<p class="hint">
+  GitHubの画像フォルダに直接アップロードした後、このページで読み込むと、並び替え・タイトル入力ができ、
+  貼り付け用のJSONを自動生成します。<strong>このツールはGitHubに書き込みを一切行いません</strong>（読み取り専用・トークン不要）。
+  生成されたJSONは、ご自身で <code>data/○○.json</code> にコピー&貼り付けしてください。
+</p>
+
+<div class="row">
+  <div>
+    <label>owner</label>
+    <input id="cfg-owner" type="text" value="a-mashiro-art">
+  </div>
+  <div>
+    <label>repository</label>
+    <input id="cfg-repo" type="text" value="a-mashiro-ar">
+  </div>
+  <div>
+    <label>branch</label>
+    <input id="cfg-branch" type="text" value="main">
+  </div>
+  <div>
+    <label>フォルダ名（例: misalignment）</label>
+    <input id="cfg-section" type="text" placeholder="misalignment">
+  </div>
+  <button id="btn-load">読み込む</button>
+</div>
+
+<div id="status" class="status"></div>
+
+<div id="card-list" class="card-list"></div>
+
+<div id="output-area" style="display:none;">
+  <label>貼り付け用JSON（data/○○.json の中身）</label>
+  <textarea id="output" readonly></textarea>
+  <div class="out-row">
+    <button id="btn-copy" class="ghost">コピー</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var items = [];
+  var sectionKey = '';
+
+  var btnLoad = document.getElementById('btn-load');
+  var statusEl = document.getElementById('status');
+  var cardListEl = document.getElementById('card-list');
+  var outputArea = document.getElementById('output-area');
+  var outputEl = document.getElementById('output');
+  var btnCopy = document.getElementById('btn-copy');
+
+  function setStatus(msg, kind) {
+    statusEl.textContent = msg || '';
+    statusEl.className = 'status' + (kind ? ' ' + kind : '');
+  }
+
+  function cfg() {
+    return {
+      owner: document.getElementById('cfg-owner').value.trim(),
+      repo: document.getElementById('cfg-repo').value.trim(),
+      branch: document.getElementById('cfg-branch').value.trim() || 'main',
+      section: document.getElementById('cfg-section').value.trim()
+    };
+  }
+
+  btnLoad.addEventListener('click', function () {
+    var c = cfg();
+    if (!c.owner || !c.repo || !c.section) {
+      setStatus('owner・repository・フォルダ名を入力してください。', 'err');
+      return;
+    }
+    sectionKey = c.section;
+    setStatus('読み込み中…');
+    cardListEl.innerHTML = '';
+    outputArea.style.display = 'none';
+
+    var apiUrl = 'https://api.github.com/repos/' + c.owner + '/' + c.repo +
+      '/contents/images/' + c.section + '?ref=' + encodeURIComponent(c.branch);
+
+    fetch(apiUrl, { headers: { 'Accept': 'application/vnd.github+json' } })
+      .then(function (res) {
+        if (!res.ok) throw new Error('フォルダが見つかりません（images/' + c.section + '）。フォルダ名を確認してください。');
+        return res.json();
+      })
+      .then(function (data) {
+        if (!Array.isArray(data)) throw new Error('images/' + c.section + ' はフォルダではないようです。');
+        items = data
+          .filter(function (f) { return f.type === 'file' && f.name !== '.gitkeep'; })
+          .map(function (f) {
+            return {
+              file: f.name,
+              title: '',
+              previewUrl: 'https://raw.githubusercontent.com/' + c.owner + '/' + c.repo + '/' + c.branch + '/images/' + c.section + '/' + encodeURIComponent(f.name)
+            };
+          });
+        if (!items.length) {
+          setStatus('このフォルダに画像が見つかりませんでした。', 'err');
+          return;
+        }
+        setStatus(items.length + '件の画像を読み込みました。カードをドラッグして並び替え、必要ならタイトルを入力してください。', 'ok');
+        renderCards();
+        updateOutput();
+      })
+      .catch(function (err) {
+        console.error(err);
+        setStatus(err.message, 'err');
+      });
+  });
+
+  function renderCards() {
+    cardListEl.innerHTML = '';
+    items.forEach(function (item, idx) {
+      var card = document.createElement('div');
+      card.className = 'card';
+      card.draggable = true;
+      card.dataset.index = idx;
+
+      var img = document.createElement('img');
+      img.src = item.previewUrl;
+      img.loading = 'lazy';
+      card.appendChild(img);
+
+      var body = document.createElement('div');
+      body.className = 'body';
+
+      var order = document.createElement('div');
+      order.className = 'order';
+      order.textContent = '#' + (idx + 1);
+      body.appendChild(order);
+
+      var fname = document.createElement('div');
+      fname.className = 'fname';
+      fname.textContent = item.file;
+      body.appendChild(fname);
+
+      var titleInput = document.createElement('input');
+      titleInput.type = 'text';
+      titleInput.placeholder = 'タイトル（任意）';
+      titleInput.value = item.title || '';
+      titleInput.addEventListener('input', function () {
+        item.title = titleInput.value;
+        updateOutput();
+      });
+      body.appendChild(titleInput);
+
+      card.appendChild(body);
+      cardListEl.appendChild(card);
+
+      card.addEventListener('dragstart', function () { card.classList.add('dragging'); });
+      card.addEventListener('dragend', function () { card.classList.remove('dragging'); });
+    });
+  }
+
+  cardListEl.addEventListener('dragover', function (e) {
+    e.preventDefault();
+    var dragging = cardListEl.querySelector('.dragging');
+    if (!dragging) return;
+    var after = getDragAfterElement(cardListEl, e.clientX);
+    if (after == null) {
+      cardListEl.appendChild(dragging);
+    } else {
+      cardListEl.insertBefore(dragging, after);
+    }
+  });
+  cardListEl.addEventListener('drop', function () {
+    var newOrder = [];
+    cardListEl.querySelectorAll('.card').forEach(function (c) {
+      newOrder.push(items[parseInt(c.dataset.index, 10)]);
+    });
+    items = newOrder;
+    renderCards();
+    updateOutput();
+  });
+
+  function getDragAfterElement(container, x) {
+    var cards = Array.prototype.slice.call(container.querySelectorAll('.card:not(.dragging)'));
+    var closest = { offset: -Infinity, element: null };
+    cards.forEach(function (card) {
+      var box = card.getBoundingClientRect();
+      var offset = x - box.left - box.width / 2;
+      if (offset < 0 && offset > closest.offset) {
+        closest = { offset: offset, element: card };
+      }
+    });
+    return closest.element;
+  }
+
+  function updateOutput() {
+    var data = items.map(function (it) {
+      return { file: it.file, title: it.title || '' };
+    });
+    outputEl.value = JSON.stringify(data, null, 2);
+    outputArea.style.display = 'block';
+  }
+
+  btnCopy.addEventListener('click', function () {
+    outputEl.select();
+    document.execCommand('copy');
+    setStatus('コピーしました。data/' + sectionKey + '.json に貼り付けてください。', 'ok');
+  });
+})();
+</script>
+</body>
+</html>

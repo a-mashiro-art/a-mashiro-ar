@@ -12,7 +12,7 @@ document.addEventListener('DOMContentLoaded', function () {
         var slide = document.createElement('div');
         slide.className = 'hero-slide' + (i === 0 ? ' active' : '');
         var img = document.createElement('img');
-        img.src = folder + item.file;
+        img.src = folder + encodeURIComponent(item.file);
         img.alt = item.title || '';
         slide.appendChild(img);
         slider.appendChild(slide);
