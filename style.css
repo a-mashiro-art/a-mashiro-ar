@@ -2,9 +2,10 @@
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
-html { scroll-behavior: smooth; }
+html { scroll-behavior: smooth; overflow-x: hidden; }
 
 body {
+  overflow-x: hidden;
   font-family: 'Tajawal', 'Segoe UI', Tahoma, sans-serif;
   font-weight: 300;
   color: #1a1a1a;
@@ -47,7 +48,8 @@ nav.mainnav a.active { color: #b34d3c; }
   right: 0;
   background: #fff;
   padding: 14px 0 6px;
-  min-width: 220px;
+  width: max-content;
+  max-width: 260px;
   text-align: right;
 }
 
@@ -234,10 +236,15 @@ footer {
   display: none;
   position: fixed;
   inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  margin: 0;
   background: #fff;
   z-index: 2000;
   overflow-y: auto;
   padding: 60px 30px 40px;
+  box-sizing: border-box;
 }
 .mobile-menu-overlay.open { display: block; }
 
