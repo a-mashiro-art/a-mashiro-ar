@@ -356,11 +356,29 @@
   btnSave.addEventListener('click', function () {
     if (!currentKey) return;
     btnSave.disabled = true;
-    setStatus('保存中…');
+    setStatus('GitHub上の最新の状態を確認しています…');
 
     var folderPath = 'images/' + currentKey;
     var manifestPath = 'data/' + currentKey + '.json';
 
+    fetchDir(folderPath).then(function (dirList) {
+      // GitHub's actual folder contents are the source of truth for this
+      // save — refresh shaMap right now instead of trusting whatever was
+      // loaded when the section was first opened.
+      var freshShaMap = {};
+      dirList.forEach(function (f) { freshShaMap[f.name] = f.sha; });
+      shaMap = freshShaMap;
+
+      setStatus('保存中…');
+      proceedWithSave(folderPath, manifestPath);
+    }).catch(function (err) {
+      console.error(err);
+      setStatus('GitHub上の状態を取得できませんでした: ' + err.message, 'err');
+      btnSave.disabled = false;
+    });
+  });
+
+  function proceedWithSave(folderPath, manifestPath) {
     var keptFiles = {};
     items.forEach(function (it) { if (!it.isNew) keptFiles[it.file] = true; });
 
@@ -500,7 +518,7 @@
       .finally(function () {
         btnSave.disabled = false;
       });
-  });
+  }
 
   function checkOk(res) {
     if (!res.ok) {
