@@ -89,18 +89,18 @@ main { max-width: 1400px; margin: 0 auto; padding: 0 48px 100px; }
 }
 
 .gallery {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 6px;
 }
 
-.gallery img { height: 100%; width: auto; max-width: 100%; display: block; }
+.gallery img { width: 100%; height: auto; max-width: none; display: block; }
 
 .gallery .gallery-item {
-  height: 280px;
+  height: auto;
 }
 
-.gallery.three .gallery-item { height: 220px; }
+.gallery.three { grid-template-columns: 1fr 1fr 1fr; }
 
 .hero-img { width: 100%; display: block; }
 
@@ -287,7 +287,7 @@ footer {
   header nav.mainnav { display: none; }
   .hamburger { display: flex; }
   main { padding: 0 20px 60px; }
-  .gallery .gallery-item, .gallery.three .gallery-item { height: 160px; }
+  .gallery, .gallery.three { grid-template-columns: 1fr; }
   .about-wrap { flex-direction: column; }
   .about-photo { width: 60%; margin: 0 auto; }
 
