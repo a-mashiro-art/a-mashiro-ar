@@ -294,7 +294,7 @@ footer {
   body.home { display: block; min-height: auto; }
   body.home .hero-slider {
     flex: none;
-    height: 45vh;
+    height: 60vh;
     padding-top: 0;
     margin: 10px 0;
     position: relative;
