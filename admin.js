@@ -329,14 +329,45 @@
     fileInputEl.value = '';
   });
 
+  var ALLOWED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'avif', 'svg', 'bmp'];
+
+  var MIME_TO_EXT = {
+    'image/jpeg': 'jpg',
+    'image/png': 'png',
+    'image/gif': 'gif',
+    'image/webp': 'webp',
+    'image/avif': 'avif',
+    'image/svg+xml': 'svg',
+    'image/bmp': 'bmp'
+  };
+
+  function safeExtension(file) {
+    var name = file.name || '';
+    var dotIndex = name.lastIndexOf('.');
+    var rawExt = dotIndex > -1 ? name.slice(dotIndex + 1).toLowerCase() : '';
+    // only accept a short, plain a-z0-9 extension from a known whitelist —
+    // anything else (no extension, Japanese/complex filenames, odd formats)
+    // falls back to the MIME type, then to a plain default
+    if (/^[a-z0-9]{1,5}$/.test(rawExt) && ALLOWED_EXTENSIONS.indexOf(rawExt) !== -1) {
+      return rawExt === 'jpeg' ? 'jpg' : rawExt;
+    }
+    if (MIME_TO_EXT[file.type]) return MIME_TO_EXT[file.type];
+    return 'jpg';
+  }
+
   function handleFiles(fileList) {
     Array.prototype.forEach.call(fileList, function (file) {
-      if (!file.type.startsWith('image/')) return;
+      // some drag-and-drop sources don't set a reliable MIME type, so also
+      // accept files whose extension clearly looks like an image
+      var looksLikeImage = file.type.startsWith('image/') ||
+        /\.(jpe?g|png|gif|webp|avif|svg|bmp)$/i.test(file.name || '');
+      if (!looksLikeImage) return;
+
       var reader = new FileReader();
       reader.onload = function () {
         var dataUrl = reader.result;
         var base64 = dataUrl.split(',')[1];
-        var ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
+        var ext = safeExtension(file);
         var filename = 'img_' + Date.now() + '_' + Math.floor(Math.random() * 1000) + '.' + ext;
         items.push({
           file: filename,
@@ -346,6 +377,9 @@
           previewUrl: dataUrl
         });
         renderCards();
+      };
+      reader.onerror = function () {
+        setStatus('画像の読み込みに失敗しました: ' + (file.name || ''), 'err');
       };
       reader.readAsDataURL(file);
     });
