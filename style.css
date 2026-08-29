@@ -201,7 +201,7 @@ footer {
   display: flex;
   gap: 100px;
   margin-top: 40px;
-  align-items: center;
+  align-items: flex-start;
 }
 
 .about-photo { width: 33%; aspect-ratio: 6 / 7; overflow: hidden; }
